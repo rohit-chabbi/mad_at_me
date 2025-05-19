@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mad at me?</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: #fff6f6;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 3rem auto;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      display: none;
+    }
+    .container.active {
+      display: block;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #ff6f91;
+    }
+    input[type="text"], input[type="password"], textarea, select {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border: 2px solid #ffd6e0;
+      border-radius: 10px;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #ffb6b9;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    .emoji-rating span {
+      font-size: 1.5rem;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    .emoji-rating span.selected {
+      transform: scale(1.2);
+    }
+    .grievance-entry {
+      background-color: #ffe3e3;
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+    .footer {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-top: 2rem;
+      color: #aaa;
+    }
+    #view-only {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    audio { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container active" id="login-page">
+    <h1>🔒 Mad at me?</h1>
+    <input type="text" id="username" placeholder="Your name" />
+    <input type="password" id="password" placeholder="Password (hint: 'grumpy')" />
+    <button onclick="login()">Log In</button>
+    <div id="view-only">
+      or <a href="#" onclick="showPage('summary'); renderGrievances();">View Grievance Wall</a> 🔍
+    </div>
+  </div>
+
+  <div class="container" id="step1">
+    <h2>😼 How serious is this?</h2>
+    <select id="grievance-type">
+      <option value="funny">Just for fun 😂</option>
+      <option value="serious">It's serious 😤</option>
+    </select>
+    <div class="emoji-rating" id="anger-rating">
+      <span onclick="selectEmoji(1)">&#128528;</span>
+      <span onclick="selectEmoji(2)">&#128533;</span>
+      <span onclick="selectEmoji(3)">&#128544;</span>
+      <span onclick="selectEmoji(4)">&#128545;</span>
+      <span onclick="selectEmoji(5)">&#129324;</span>
+    </div>
+    <button onclick="goToStep(2)">Next</button>
+    <audio id="madness-sound">
+      <source src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg" type="audio/ogg">
+    </audio>
+  </div>
+
+  <div class="container" id="step2">
+    <h2>💥 Let it all out</h2>
+    <textarea id="rant" rows="5" placeholder="Tell us everything. Be dramatic."></textarea>
+    <button onclick="goToStep(3)">Next</button>
+  </div>
+
+  <div class="container" id="step3">
+    <h2>🛠️ How can the defaulter do better?</h2>
+    <textarea id="solution" rows="4" placeholder="Suggest improvements or say something sweet."></textarea>
+    <button onclick="submitGrievance()">Submit</button>
+  </div>
+
+  <div class="container" id="summary">
+    <h2>🧾 Grievance Wall</h2>
+    <div id="grievance-wall"></div>
+    <button onclick="clearGrievances()">🗑️ Clear All Grievances</button>
+    <div class="footer">
+      Made with 💗 for this silly, sassy, lovely family.
+    </div>
+  </div>
+
+  <script>
+    let selectedEmoji = 0;
+    const grievanceData = [];
+
+    function login() {
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+
+      if (pass === "grumpy" && user.trim() !== "") {
+        sessionStorage.setItem("user", user);
+        showPage("step1");
+      } else {
+        alert("Nope! Try again 😜");
+      }
+    }
+
+    function showPage(id) {
+      document.querySelectorAll(".container").forEach(c => c.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    function goToStep(step) {
+      if (step === 2 && selectedEmoji === 0) {
+        alert("Pick how mad you are first 😾");
+        return;
+      }
+      if (step === 3 && document.getElementById("rant").value.trim() === "") {
+        alert("Don't hold back now 🙃");
+        return;
+      }
+      showPage(`step${step}`);
+    }
+
+    function selectEmoji(level) {
+      selectedEmoji = level;
+      document.querySelectorAll(".emoji-rating span").forEach((el, idx) => {
+        el.classList.toggle("selected", idx + 1 === level);
+      });
+      document.getElementById("madness-sound").play();
+    }
+
+    function submitGrievance() {
+      const user = sessionStorage.getItem("user") || "Anonymous";
+      const type = document.getElementById("grievance-type").value;
+      const rant = document.getElementById("rant").value.trim();
+      const solution = document.getElementById("solution").value.trim();
+
+      const entry = {
+        user,
+        type,
+        anger: selectedEmoji,
+        rant,
+        solution,
+        time: new Date().toLocaleString()
+      };
+
+      grievanceData.push(entry);
+      localStorage.setItem("grievances", JSON.stringify(grievanceData));
+      renderGrievances();
+      showPage("summary");
+    }
+
+    function renderGrievances() {
+      const wall = document.getElementById("grievance-wall");
+      wall.innerHTML = "";
+      const data = JSON.parse(localStorage.getItem("grievances")) || [];
+
+      data.reverse().forEach(g => {
+        const div = document.createElement("div");
+        div.className = "grievance-entry";
+        div.innerHTML = `
+          <strong>${g.user}</strong> (${g.type})<br>
+          <strong>Mad level:</strong> ${["😐","😕","😠","😡","🤬"][g.anger - 1]}<br>
+          <strong>Rant:</strong> ${g.rant}<br>
+          <strong>How to fix:</strong> ${g.solution}<br>
+          <em>${g.time}</em>
+        `;
+        wall.appendChild(div);
+      });
+    }
+
+    function clearGrievances() {
+      if (confirm("Are you sure you want to clear all grievances? 😰")) {
+        localStorage.removeItem("grievances");
+        grievanceData.length = 0;
+        renderGrievances();
+      }
+    }
+
+    window.onload = () => {
+      if (localStorage.getItem("grievances")) {
+        grievanceData.push(...JSON.parse(localStorage.getItem("grievances")));
+        renderGrievances();
+      }
+    }
+  </script>
+</body>
+</html>
